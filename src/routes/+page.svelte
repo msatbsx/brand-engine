@@ -43,13 +43,19 @@
 		Low: 'bg-red-100 text-red-800'
 	};
 
-	// Matches a section header in any format Claude might use:
-	// "Visual issues:", "**Visual issues:**", "## Visual issues", "VISUAL ISSUES:", etc.
+	// Matches a section header in any format Claude might produce.
+	// Handles plain, **bold**, ## heading, UPPERCASE, with or without colon,
+	// and also the step-format Claude sometimes uses: "STEP 2 — BRAND GUIDELINE COMPLIANCE".
+	// Each name entry can be a plain string or a regex fragment (e.g. "brand.*compliance").
 	function sectionRegex(name: string) {
-		return new RegExp(`(?:#{1,6}\\s*|\\*{1,2})*${name}(?:\\*{1,2})*:?\\s*`, 'i');
+		return new RegExp(
+			`(?:step\\s*\\d+\\s*[—–-]+\\s*)?(?:#{1,6}\\s*|\\*{1,2})*${name}(?:\\*{1,2})*:?\\s*`,
+			'i'
+		);
 	}
 
-	// Extract the text content of a named section, stopping at any of the next section headers.
+	// Extract the text of a named section, stopping at the first matching stopAt header.
+	// Each entry in names/stopAt can include regex fragments (e.g. "brand.*compliance").
 	function extractSection(text: string, name: string, stopAt: string[]): string | null {
 		const headerRe = sectionRegex(name);
 		const match = headerRe.exec(text);
@@ -81,18 +87,17 @@
 		const evidence = extractSection(raw, 'Evidence', []);
 
 		if (hasImages) {
-			const visualIssues = extractSection(raw, 'Visual issues', [
-				'Brand compliance',
-				'Verdict',
-				'Sources',
-				'Evidence'
-			]);
-			const brandCompliance = extractSection(raw, 'Brand compliance', [
-				'Verdict',
-				'Sources',
-				'Evidence'
-			]);
-			const verdictRaw = raw.match(/(?:#{1,6}\s*|\*{1,2})*Verdict(?:\*{1,2})*:?\s*([^\n]+)/i);
+			// Accept both "Visual issues:" and "STEP 1 — DISTORTION CHECKS" style headings.
+			// Accept both "Brand compliance:" and "STEP 2 — BRAND GUIDELINE COMPLIANCE" style.
+			const visualIssues =
+				extractSection(raw, 'Visual issues', ['brand.*compliance', 'Verdict', 'Sources', 'Evidence']) ??
+				extractSection(raw, 'distortion checks', ['brand.*compliance', 'Verdict', 'Sources', 'Evidence']);
+
+			const brandCompliance =
+				extractSection(raw, 'brand.*compliance', ['Verdict', 'Sources', 'Evidence']) ??
+				extractSection(raw, 'guideline compliance', ['Verdict', 'Sources', 'Evidence']);
+
+			const verdictRaw = raw.match(/(?:step\s*\d+\s*[—–-]+\s*)?(?:#{1,6}\s*|\*{1,2})*Verdict(?:\*{1,2})*:?\s*([^\n]+)/i);
 
 			return {
 				raw,
