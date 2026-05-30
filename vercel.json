@@ -1,7 +1,0 @@
-{
-  "functions": {
-    "src/routes/api/chat/+server.ts": {
-      "includeFiles": "src/lib/brand-assets/**"
-    }
-  }
-}

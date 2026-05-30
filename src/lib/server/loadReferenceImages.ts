@@ -1,9 +1,9 @@
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { join, dirname } from 'path';
-
-// Resolve path relative to this module file — works locally and on Vercel.
-const ASSETS_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../brand-assets');
+// Vite's ?inline query bundles each image directly into the JS output as a
+// base64 data URL — no filesystem reads at runtime, works on Vercel and everywhere else.
+const inlinedRefs = import.meta.glob('/src/lib/brand-assets/*.jpg', {
+	query: '?inline',
+	eager: true
+}) as Record<string, { default: string }>;
 
 export interface ReferenceImage {
 	filename: string;
@@ -11,33 +11,30 @@ export interface ReferenceImage {
 	data: string; // raw base64, no data-URL prefix
 }
 
-const REFERENCE_FILES: { filename: string; label: string }[] = [
-	{
-		filename: 'logo-primary-reference.jpg',
-		label: 'CANONICAL REFERENCE — Primary logo (correct proportions, Lime on Black and Lime backgrounds)'
-	},
-	{
-		filename: 'logo-symbol-reference.jpg',
-		label: 'CANONICAL REFERENCE — Symbol logo (correct proportions)'
-	},
-	{
-		filename: 'color-palette-reference.jpg',
-		label: 'CANONICAL REFERENCE — Approved colour palette with exact hex codes'
-	},
-	{
-		filename: 'logo-backgrounds-reference.jpg',
-		label: 'CANONICAL REFERENCE — Approved and prohibited logo background combinations'
-	}
-];
+const LABELS: Record<string, string> = {
+	'logo-primary-reference.jpg':
+		'CANONICAL REFERENCE — Primary logo (correct proportions, Lime on Black and Lime backgrounds)',
+	'logo-symbol-reference.jpg': 'CANONICAL REFERENCE — Symbol logo (correct proportions)',
+	'color-palette-reference.jpg':
+		'CANONICAL REFERENCE — Approved colour palette with exact hex codes',
+	'logo-backgrounds-reference.jpg':
+		'CANONICAL REFERENCE — Approved and prohibited logo background combinations'
+};
 
 export function loadReferenceImages(): ReferenceImage[] {
-	return REFERENCE_FILES.flatMap(({ filename, label }) => {
-		try {
-			const data = readFileSync(join(ASSETS_DIR, filename)).toString('base64');
-			return [{ filename, label, data }];
-		} catch {
-			console.warn(`Reference image not found: ${filename} — run yarn preprocess to generate it.`);
+	return Object.entries(inlinedRefs).flatMap(([path, mod]) => {
+		const filename = path.split('/').at(-1) ?? path;
+		const dataUrl: string = mod.default ?? '';
+
+		if (!dataUrl) {
+			console.warn(`Empty reference image: ${filename}`);
 			return [];
 		}
+
+		// ?inline returns "data:image/jpeg;base64,<actual_base64>"
+		// Anthropic expects raw base64 only — strip everything up to and including the comma.
+		const data = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+
+		return [{ filename, label: LABELS[filename] ?? `CANONICAL REFERENCE — ${filename}`, data }];
 	});
 }
