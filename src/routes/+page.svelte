@@ -32,8 +32,8 @@
 	let images = $state<ImagePreview[]>([]);
 	let dragging = $state(false);
 	let evidenceOpen = $state(false);
-	let visualIssuesOpen = $state(true);
-	let brandComplianceOpen = $state(true);
+	let visualIssuesOpen = $state(false);
+	let brandComplianceOpen = $state(false);
 	let fullResponseOpen = $state(false);
 	let fileInput: HTMLInputElement;
 
@@ -187,8 +187,8 @@
 		result = null;
 		streamedText = '';
 		evidenceOpen = false;
-		visualIssuesOpen = true;
-		brandComplianceOpen = true;
+		visualIssuesOpen = false;
+		brandComplianceOpen = false;
 		fullResponseOpen = false;
 
 		try {
