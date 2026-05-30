@@ -30,3 +30,6 @@ test-results
 # Brand document source PDFs — too large for git (>100MB).
 # Run `yarn preprocess` locally to regenerate the *-extracted.md files.
 src/lib/brand-documents/*.pdf
+
+# Reference images are committed to git (small JPEGs, ~1 MB total).
+# Regenerate with `yarn preprocess` if the brand PDF changes.

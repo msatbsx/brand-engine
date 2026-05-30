@@ -14,8 +14,18 @@ import { join, basename, extname } from 'path';
 import { tmpdir } from 'os';
 
 const DOCS_DIR = join(process.cwd(), 'src/lib/brand-documents');
+const ASSETS_DIR = join(process.cwd(), 'src/lib/brand-assets');
 const PAGES_PER_BATCH = 8;
 const DPI = 96;
+
+// Pages to extract as canonical visual reference images (1-based).
+// Update these if the brand guidelines PDF changes.
+const REFERENCE_PAGES: Record<string, string> = {
+	'5': 'logo-primary-reference.jpg',
+	'6': 'logo-symbol-reference.jpg',
+	'13': 'color-palette-reference.jpg',
+	'16': 'logo-backgrounds-reference.jpg'
+};
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 const force = process.argv.includes('--force');
@@ -47,6 +57,7 @@ async function main() {
 		await processPdf(pdfPath, pdf, outputMd);
 	}
 
+	await extractReferenceImages(pdfs[0]);
 	console.log('\n✅ Done.');
 }
 
@@ -183,6 +194,25 @@ ${combined}`
 
 	const block = response.content[0];
 	return block.type === 'text' ? block.text : combined;
+}
+
+async function extractReferenceImages(pdfFilename: string) {
+	const pdfPath = join(DOCS_DIR, pdfFilename);
+	await mkdir(ASSETS_DIR, { recursive: true });
+
+	console.log('\n🖼  Extracting reference images…');
+	for (const [page, outputFilename] of Object.entries(REFERENCE_PAGES)) {
+		const outputPath = join(ASSETS_DIR, outputFilename);
+		if (!force && existsSync(outputPath)) {
+			console.log(`  ⏭  Skipping ${outputFilename} — already exists.`);
+			continue;
+		}
+		const tmpPrefix = join(ASSETS_DIR, '_tmp_ref');
+		execSync(`pdftoppm -r 150 -jpeg -f ${page} -l ${page} "${pdfPath}" "${tmpPrefix}"`);
+		const tmpFile = `${tmpPrefix}-${String(page).padStart(2, '0')}.jpg`;
+		execSync(`mv "${tmpFile}" "${outputPath}"`);
+		console.log(`  ✅ ${outputFilename}`);
+	}
 }
 
 main().catch((err) => {
