@@ -32,6 +32,9 @@
 	let images = $state<ImagePreview[]>([]);
 	let dragging = $state(false);
 	let evidenceOpen = $state(false);
+	let visualIssuesOpen = $state(true);
+	let brandComplianceOpen = $state(true);
+	let fullResponseOpen = $state(false);
 	let fileInput: HTMLInputElement;
 
 	const confidenceColour: Record<string, string> = {
@@ -40,47 +43,81 @@
 		Low: 'bg-red-100 text-red-800'
 	};
 
+	// Matches a section header in any format Claude might use:
+	// "Visual issues:", "**Visual issues:**", "## Visual issues", "VISUAL ISSUES:", etc.
+	function sectionRegex(name: string) {
+		return new RegExp(`(?:#{1,6}\\s*|\\*{1,2})*${name}(?:\\*{1,2})*:?\\s*`, 'i');
+	}
+
+	// Extract the text content of a named section, stopping at any of the next section headers.
+	function extractSection(text: string, name: string, stopAt: string[]): string | null {
+		const headerRe = sectionRegex(name);
+		const match = headerRe.exec(text);
+		if (!match) return null;
+
+		const contentStart = match.index + match[0].length;
+		let contentEnd = text.length;
+
+		for (const stop of stopAt) {
+			const stopRe = sectionRegex(stop);
+			const stopMatch = stopRe.exec(text.slice(contentStart));
+			if (stopMatch) {
+				const idx = contentStart + stopMatch.index;
+				if (idx < contentEnd) contentEnd = idx;
+			}
+		}
+
+		return text.slice(contentStart, contentEnd).trim() || null;
+	}
+
 	function parseAnswer(raw: string, hasImages: boolean): AnswerState {
 		const confidenceMatch = raw.match(/Confidence:\s*(High|Medium|Low)/i);
-		const sourcesMatch = raw.match(/Sources:\s*([\s\S]*?)(?=Evidence:|$)/i);
-		const evidenceMatch = raw.match(/Evidence:\s*([\s\S]*?)$/i);
 
-		const sources = sourcesMatch
-			? sourcesMatch[1]
-					.split('\n')
-					.map((s) => s.replace(/^[-*]\s*/, '').trim())
-					.filter(Boolean)
-			: [];
+		const sources = (extractSection(raw, 'Sources', ['Evidence']) ?? '')
+			.split('\n')
+			.map((s) => s.replace(/^[-*]\s*/, '').trim())
+			.filter(Boolean);
+
+		const evidence = extractSection(raw, 'Evidence', []);
 
 		if (hasImages) {
-			const visualMatch = raw.match(/Visual issues:\s*([\s\S]*?)(?=Brand compliance:|$)/i);
-			const complianceMatch = raw.match(/Brand compliance:\s*([\s\S]*?)(?=Verdict:|Sources:|$)/i);
-			const verdictMatch = raw.match(/Verdict:\s*(.+)/i);
+			const visualIssues = extractSection(raw, 'Visual issues', [
+				'Brand compliance',
+				'Verdict',
+				'Sources',
+				'Evidence'
+			]);
+			const brandCompliance = extractSection(raw, 'Brand compliance', [
+				'Verdict',
+				'Sources',
+				'Evidence'
+			]);
+			const verdictRaw = raw.match(/(?:#{1,6}\s*|\*{1,2})*Verdict(?:\*{1,2})*:?\s*([^\n]+)/i);
 
 			return {
 				raw,
 				mode: 'image-review',
 				confidence: confidenceMatch ? confidenceMatch[1] : null,
 				answer: null,
-				visualIssues: visualMatch ? visualMatch[1].trim() : null,
-				brandCompliance: complianceMatch ? complianceMatch[1].trim() : null,
-				verdict: verdictMatch ? verdictMatch[1].trim() : null,
+				visualIssues,
+				brandCompliance,
+				verdict: verdictRaw ? verdictRaw[1].replace(/\*+/g, '').trim() : null,
 				sources,
-				evidence: evidenceMatch ? evidenceMatch[1].trim() : null
+				evidence
 			};
 		}
 
-		const answerMatch = raw.match(/Answer:\s*([\s\S]*?)(?=Sources:|Evidence:|$)/i);
+		const answer = extractSection(raw, 'Answer', ['Sources', 'Evidence']);
 		return {
 			raw,
 			mode: 'text',
 			confidence: confidenceMatch ? confidenceMatch[1] : null,
-			answer: answerMatch ? answerMatch[1].trim() : null,
+			answer,
 			visualIssues: null,
 			brandCompliance: null,
 			verdict: null,
 			sources,
-			evidence: evidenceMatch ? evidenceMatch[1].trim() : null
+			evidence
 		};
 	}
 
@@ -145,6 +182,9 @@
 		result = null;
 		streamedText = '';
 		evidenceOpen = false;
+		visualIssuesOpen = true;
+		brandComplianceOpen = true;
+		fullResponseOpen = false;
 
 		try {
 			const payload = {
@@ -347,29 +387,45 @@
 				</div>
 
 				{#if result.mode === 'image-review'}
-					<!-- Visual issues -->
-					{#if result.visualIssues}
-						<div class="flex flex-col gap-1.5">
-							<h3 class="text-xs font-semibold text-[#2D2D2D]/50 uppercase tracking-wide">
-								Visual issues
-							</h3>
-							<div class="text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-wrap">
+					<!-- Visual issues (collapsible, open by default) -->
+					<div class="border-t border-[#2D2D2D]/8 pt-3">
+						<button
+							onclick={() => (visualIssuesOpen = !visualIssuesOpen)}
+							class="w-full flex items-center justify-between text-xs font-semibold text-[#2D2D2D]/50 uppercase tracking-wide hover:text-[#2D2D2D] transition"
+						>
+							<span>Visual issues</span>
+							<span>{visualIssuesOpen ? '▲' : '▼'}</span>
+						</button>
+						{#if visualIssuesOpen}
+							<div class="mt-2 text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-wrap">
+								{#if result.visualIssues}
 								{result.visualIssues}
+							{:else}
+								<span class="text-[#2D2D2D]/40 italic">Could not parse this section — see Full response below.</span>
+							{/if}
 							</div>
-						</div>
-					{/if}
+						{/if}
+					</div>
 
-					<!-- Brand compliance -->
-					{#if result.brandCompliance}
-						<div class="flex flex-col gap-1.5 border-t border-[#2D2D2D]/8 pt-4">
-							<h3 class="text-xs font-semibold text-[#2D2D2D]/50 uppercase tracking-wide">
-								Brand compliance
-							</h3>
-							<div class="text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-wrap">
-								{result.brandCompliance}
+					<!-- Brand compliance (collapsible, open by default) -->
+					<div class="border-t border-[#2D2D2D]/8 pt-3">
+						<button
+							onclick={() => (brandComplianceOpen = !brandComplianceOpen)}
+							class="w-full flex items-center justify-between text-xs font-semibold text-[#2D2D2D]/50 uppercase tracking-wide hover:text-[#2D2D2D] transition"
+						>
+							<span>Brand compliance</span>
+							<span>{brandComplianceOpen ? '▲' : '▼'}</span>
+						</button>
+						{#if brandComplianceOpen}
+							<div class="mt-2 text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-wrap">
+								{#if result.brandCompliance}
+									{result.brandCompliance}
+								{:else}
+									<span class="text-[#2D2D2D]/40 italic">Could not parse this section — see Full response below.</span>
+								{/if}
 							</div>
-						</div>
-					{/if}
+						{/if}
+					</div>
 				{:else}
 					<!-- Plain answer -->
 					<div class="text-[#2D2D2D] text-sm leading-relaxed whitespace-pre-wrap">
@@ -404,6 +460,19 @@
 						{/if}
 					</div>
 				{/if}
+
+				<!-- Full raw response -->
+				<div class="border-t border-[#2D2D2D]/8 pt-3">
+					<button
+						onclick={() => (fullResponseOpen = !fullResponseOpen)}
+						class="text-xs text-[#2D2D2D]/40 hover:text-[#2D2D2D] transition flex items-center gap-1"
+					>
+						Full response {fullResponseOpen ? '▲' : '▼'}
+					</button>
+					{#if fullResponseOpen}
+						<pre class="mt-2 text-xs text-[#2D2D2D]/60 whitespace-pre-wrap font-mono leading-relaxed">{result.raw}</pre>
+					{/if}
+				</div>
 
 			</div>
 

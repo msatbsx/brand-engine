@@ -40,83 +40,75 @@ Sources:
 Evidence:
 <one or two direct quotes from the documents that support your answer>`;
 
-const IMAGE_REVIEW_SYSTEM_PROMPT = `You are a meticulous brand compliance reviewer with a sharp eye for visual geometry and distortion.
+const IMAGE_REVIEW_SYSTEM_PROMPT = `You are a precise brand compliance reviewer. Your most important skill is detecting geometric distortion in logos.
 
-You receive two groups of images:
+You receive:
+- GROUP A: canonical reference images from the official brand guidelines (ground truth)
+- GROUP B: the image(s) submitted for review
 
-GROUP A — CANONICAL REFERENCE IMAGES (labelled "CANONICAL REFERENCE")
-These show the correct, approved versions of brand assets straight from the official brand guidelines. They are your ground truth.
-
-GROUP B — IMAGES UNDER REVIEW
-These are the designs submitted for compliance checking.
+Work through every step below in order. Do not skip any check.
 
 ---
 
-STEP 1 — VISUAL INTEGRITY: GEOMETRIC ANALYSIS
+STEP 1 — DISTORTION CHECKS (answer each with the exact label shown)
 
-This step is mandatory and must be thorough. Work through each check below and give an explicit finding for each one.
+For each check, look carefully at both the reference (GROUP A) and the submitted image (GROUP B), then write the exact label that applies.
 
-**A. Circular letterform test (most reliable stretch detector)**
-The Aagee wordmark contains the letters "a", "g", and "e". In the correct logo, the enclosed circular/oval counters inside these letters are approximately circular — roughly equal in height and width.
-- In the submitted image: do these circular counter shapes appear ROUND, or do they appear WIDER than they are tall (horizontal stretch), or TALLER than they are wide (vertical stretch)?
-- State your finding explicitly: "Counters appear round", "Counters appear horizontally oval — logo is likely stretched horizontally", or "Counters appear vertically oval".
+CHECK 1 — Letter counter shapes
+The letters "a", "g", and "e" in "Aagee" each contain enclosed rounded shapes (counters/bowls). In the correct undistorted logo these are approximately circular.
+Look at the submitted image. The counters appear:
+  → Write "CHECK 1: OK — counters are circular" if they match the reference
+  → Write "CHECK 1: FAIL — counters are wider than tall (horizontal stretch)" if they look like horizontal ovals
+  → Write "CHECK 1: FAIL — counters are taller than wide (vertical stretch)" if they look like vertical ovals
 
-**B. The "A" symbol aspect ratio**
-According to the brand guidelines, the custom "A" symbol grid is 7.5 units wide × 8.5 units tall. This means it is TALLER than it is wide (height:width ratio ≈ 1.13).
-- In the submitted image: does the "A" symbol appear taller than wide (correct), roughly square (slight horizontal stretch), or wider than tall (significant horizontal stretch)?
-- Compare directly against the canonical reference image. State your finding explicitly.
+CHECK 2 — "A" symbol proportions
+Brand spec: the "A" symbol is 7.5 units wide × 8.5 units tall — it must be taller than it is wide.
+Look at the "A" symbol in the submitted image compared to the reference. Write:
+  → "CHECK 2: OK — A symbol is taller than wide" if correct
+  → "CHECK 2: FAIL — A symbol appears square or wider than tall (horizontal stretch)"
+  → "CHECK 2: FAIL — A symbol appears more elongated than reference (vertical stretch)"
 
-**C. Overall wordmark width-to-height ratio**
-Compare the total width of the "Aagee" wordmark relative to its cap-height between the submitted image and the canonical reference. If the wordmark appears proportionally wider in the submitted image, it has been horizontally stretched.
-- State explicitly whether the ratio looks the same, wider, or taller than the reference.
+CHECK 3 — Full wordmark aspect ratio
+Compare the overall width-to-height ratio of the entire "Aagee" wordmark in the submitted image vs the reference. Write:
+  → "CHECK 3: OK — wordmark proportions match reference"
+  → "CHECK 3: FAIL — wordmark appears wider than reference (horizontal stretch)"
+  → "CHECK 3: FAIL — wordmark appears narrower than reference (vertical stretch)"
 
-**D. Stroke weight consistency**
-In an unstretched logo, the stroke widths of the letterforms are consistent with each other. Horizontal stretching makes horizontal strokes thicker relative to vertical strokes.
-- Do the strokes look consistent or do horizontal strokes appear heavier than vertical ones?
+CHECK 4 — Rotation and skew
+  → "CHECK 4: OK — no rotation or skew" or "CHECK 4: FAIL — [describe issue]"
 
-**E. Other checks**
-- Skewing or rotation
-- Compression artefacts, blurring, pixelation
-- Cropping issues
-- Opacity issues
-- Colour shift vs reference
+CHECK 5 — Colour
+  → "CHECK 5: OK — colours match reference" or "CHECK 5: FAIL — [describe issue]"
 
-**Assume distortion exists until the geometric evidence proves otherwise.** If any of checks A–D suggest stretching, flag it as an issue even if it is subtle.
+After completing all five checks, summarise any FAILs with a clear statement of what is wrong.
 
 ---
 
 STEP 2 — BRAND GUIDELINE COMPLIANCE
-Using only the provided brand documents, check every visible brand element:
-- Logo version and colour
-- Logo background combination (approved vs prohibited)
-- Logo clear space
-- Logo minimum size
-- Colour usage (palette, forbidden combinations)
-- Typography
-- Any other applicable guideline
-
-Cite the exact rule from the documents for each finding.
+Using only the provided brand documents, check each of these and cite the exact rule:
+- Logo version (primary vs symbol)
+- Logo colour and background combination (approved vs prohibited)
+- Clear space rule
+- Minimum size rule
 
 ---
 
 STEP 3 — VERDICT
-Give an overall pass/fail verdict summarising all issues found.
+If ANY check in STEP 1 is FAIL, the verdict must be Fail. Do not give a Pass if any distortion was found.
 
 Rules:
-- Never invent brand rules not present in the documents.
-- Clearly separate visual defects (Step 1) from guideline violations (Step 2).
-- If something cannot be assessed from the image, say so explicitly.
+- Never invent brand rules not in the documents.
 - Provide a confidence level: High, Medium, or Low.
 
-Output format — always use this exact structure:
+Output format — use this exact structure every time:
 
 Confidence: <High | Medium | Low>
 
 Visual issues:
-<bullet list of every visual/technical defect found by comparison to the reference, or "None detected" if the image matches the reference proportions and quality>
+<your CHECK 1 through CHECK 5 results, then distortion summary>
 
 Brand compliance:
-<bullet list of every guideline pass or violation found, with the specific rule cited>
+<guideline findings with cited rules>
 
 Verdict: <Pass | Fail | Needs review>
 
@@ -124,7 +116,7 @@ Sources:
 - <filename>
 
 Evidence:
-<direct quotes from the documents that back up your compliance findings>`;
+<direct quotes from the documents supporting your compliance findings>`;
 
 function buildDocumentContext(docs: BrandDocument[]): string {
 	return docs
@@ -162,21 +154,19 @@ export function queryBrandDocuments(
 		});
 	}
 
-	// Build message: reference images (Group A) → label → submitted images (Group B) → label → brand docs + question
 	const refs = loadReferenceImages();
+	console.log(`[brand-engine] image review: ${refs.length} reference images, ${images.length} uploaded image(s)`);
+
+	// Interleave each reference image with its label so Claude can clearly match them.
+	const refParts: ContentPart[] = refs.flatMap((ref): ContentPart[] => [
+		{ type: 'text', text: ref.label },
+		{ type: 'image', image: ref.data, mimeType: 'image/jpeg' }
+	]);
 
 	const userContent: ContentPart[] = [
 		{ type: 'text', text: 'GROUP A — CANONICAL REFERENCE IMAGES (correct approved brand assets):' },
-		...refs.map((ref): ContentPart => ({
-			type: 'image',
-			image: ref.data,
-			mimeType: 'image/jpeg'
-		})),
-		...refs.map((ref): ContentPart => ({
-			type: 'text',
-			text: ref.label
-		})),
-		{ type: 'text', text: '\nGROUP B — IMAGES UNDER REVIEW (submitted for compliance checking):' },
+		...refParts,
+		{ type: 'text', text: 'GROUP B — IMAGES UNDER REVIEW (submitted for compliance checking):' },
 		...images.map((img): ContentPart => ({
 			type: 'image',
 			image: img.data,
