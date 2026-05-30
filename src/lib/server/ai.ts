@@ -8,9 +8,17 @@ const anthropic = createAnthropic({
 	apiKey: ANTHROPIC_API_KEY
 });
 
+export interface ImageAnalysis {
+	width: number;
+	height: number;
+	aspectRatio: number;
+	logoRegion: { x: number; y: number; w: number; h: number; aspectRatio: number } | null;
+}
+
 export interface UploadedImage {
 	data: string; // base64, no data-URL prefix
 	mimeType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+	analysis?: ImageAnalysis | null;
 }
 
 const TEXT_ONLY_SYSTEM_PROMPT = `You are a brand guidelines assistant.
@@ -95,7 +103,9 @@ Using only the provided brand documents, check each of these and cite the exact 
 ---
 
 STEP 3 — VERDICT
-If ANY check in STEP 1 is FAIL, the verdict must be Fail. Do not give a Pass if any distortion was found.
+If ANY check in STEP 1 is FAIL, the verdict must be Fail.
+If the PIXEL ANALYSIS section flags a stretch issue (⚠️), the verdict must be Fail regardless of visual check results — pixel measurements are mathematically certain.
+Do not give a Pass if any distortion was found.
 
 Rules:
 - Never invent brand rules not in the documents.
@@ -138,7 +148,35 @@ export function queryBrandDocuments(
 	images: UploadedImage[] = []
 ) {
 	const documentContext = buildDocumentContext(docs);
-	const textContent = `Brand documents:\n\n${documentContext}\n\n---\n\nQuestion: ${question}`;
+
+	// Build pixel-analysis context from client-side measurements (deterministic).
+	const pixelNotes = images
+		.map((img, i) => {
+			if (!img.analysis) return null;
+			const { width, height, aspectRatio, logoRegion } = img.analysis;
+			const lines = [`Image ${i + 1}: ${width}×${height}px, overall aspect ratio ${aspectRatio.toFixed(2)}:1`];
+			if (logoRegion) {
+				lines.push(
+					`  Lime logo region detected: ${logoRegion.w}×${logoRegion.h}px, ` +
+					`logo aspect ratio ${logoRegion.aspectRatio.toFixed(2)}:1. ` +
+					`The correct Aagee primary logo has an aspect ratio of approximately 3.2:1–3.8:1. ` +
+					(logoRegion.aspectRatio > 4.0
+						? `⚠️ PIXEL ANALYSIS FLAG: logo region is ${logoRegion.aspectRatio.toFixed(2)}:1 — significantly wider than expected, indicating HORIZONTAL STRETCH.`
+						: logoRegion.aspectRatio < 2.5
+						? `⚠️ PIXEL ANALYSIS FLAG: logo region is ${logoRegion.aspectRatio.toFixed(2)}:1 — narrower than expected, indicating VERTICAL STRETCH.`
+						: `Aspect ratio within normal range.`)
+				);
+			}
+			return lines.join('\n');
+		})
+		.filter(Boolean)
+		.join('\n');
+
+	const pixelContext = pixelNotes
+		? `\nPIXEL ANALYSIS (computed mathematically from the submitted image — treat as ground truth):\n${pixelNotes}\n`
+		: '';
+
+	const textContent = `Brand documents:\n\n${documentContext}\n\n---\n${pixelContext}\nQuestion: ${question}`;
 
 	type ContentPart =
 		| { type: 'text'; text: string }
@@ -177,10 +215,9 @@ export function queryBrandDocuments(
 	];
 
 	return streamText({
-		model: anthropic('claude-sonnet-4-6'),
+		model: anthropic('claude-opus-4-5'),
 		system: IMAGE_REVIEW_SYSTEM_PROMPT,
 		messages: [{ role: 'user', content: userContent }],
-		maxOutputTokens: 3000,
-		temperature: 0 // deterministic output — prevents different results across runs and deployments
+		maxOutputTokens: 3000
 	});
 }

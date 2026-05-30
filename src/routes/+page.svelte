@@ -1,4 +1,19 @@
 <script lang="ts">
+	import { marked } from 'marked';
+	import { analyzeImageFile, type ImageAnalysis } from '$lib/analyzeImage.js';
+
+	marked.setOptions({ breaks: true });
+
+	function md(text: string | null | undefined): string {
+		if (!text) return '';
+		return marked.parse(text) as string;
+	}
+
+	interface TokenUsage {
+		promptTokens: number;
+		completionTokens: number;
+	}
+
 	interface AnswerState {
 		raw: string;
 		mode: 'text' | 'image-review';
@@ -18,6 +33,7 @@
 		dataUrl: string;
 		mimeType: string;
 		name: string;
+		analysis: ImageAnalysis | null;
 	}
 
 	const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -35,6 +51,7 @@
 	let visualIssuesOpen = $state(false);
 	let brandComplianceOpen = $state(false);
 	let fullResponseOpen = $state(false);
+	let tokenUsage = $state<TokenUsage | null>(null);
 	let fileInput: HTMLInputElement;
 
 	const confidenceColour: Record<string, string> = {
@@ -77,7 +94,10 @@
 	}
 
 	function parseAnswer(raw: string, hasImages: boolean): AnswerState {
-		const confidenceMatch = raw.match(/Confidence:\s*(High|Medium|Low)/i);
+		// Handle any formatting Opus might use: "Confidence: High", "**Confidence:** High", "**Confidence: High**"
+		const confidenceMatch =
+			raw.match(/\bconfidence\b[^a-z\n]*:?\s*\*{0,2}(High|Medium|Low)\*{0,2}/i) ??
+			raw.match(/\bconfidence\b[^\n]*\n+\*{0,2}(High|Medium|Low)\*{0,2}/i);
 
 		const sources = (extractSection(raw, 'Sources', ['Evidence']) ?? '')
 			.split('\n')
@@ -97,7 +117,12 @@
 				extractSection(raw, 'brand.*compliance', ['Verdict', 'Sources', 'Evidence']) ??
 				extractSection(raw, 'guideline compliance', ['Verdict', 'Sources', 'Evidence']);
 
-			const verdictRaw = raw.match(/(?:step\s*\d+\s*[—–-]+\s*)?(?:#{1,6}\s*|\*{1,2})*Verdict(?:\*{1,2})*:?\s*([^\n]+)/i);
+			// Match Verdict in any format Opus might use:
+			// "Verdict: Fail", "**Verdict: Fail**", "Verdict: **Fail**", "VERDICT: FAIL"
+			// Also scan for standalone Pass/Fail/Needs review near the word Verdict
+			const verdictRaw =
+				raw.match(/\bverdict\b[^a-z\n]*:?\s*\*{0,2}(Pass|Fail|Needs review)\*{0,2}/i) ??
+				raw.match(/\bverdict\b[^\n]*\n+\*{0,2}(Pass|Fail|Needs review)\*{0,2}/i);
 
 			return {
 				raw,
@@ -106,7 +131,7 @@
 				answer: null,
 				visualIssues,
 				brandCompliance,
-				verdict: verdictRaw ? verdictRaw[1].replace(/\*+/g, '').trim() : null,
+				verdict: verdictRaw ? verdictRaw[1].trim() : null,
 				sources,
 				evidence
 			};
@@ -150,7 +175,8 @@
 				continue;
 			}
 			const dataUrl = await readFileAsDataUrl(file);
-			images = [...images, { dataUrl, mimeType: file.type, name: file.name }];
+			const analysis = await analyzeImageFile(dataUrl).catch(() => null);
+			images = [...images, { dataUrl, mimeType: file.type, name: file.name, analysis }];
 		}
 	}
 
@@ -186,6 +212,7 @@
 		error = null;
 		result = null;
 		streamedText = '';
+		tokenUsage = null;
 		evidenceOpen = false;
 		visualIssuesOpen = false;
 		brandComplianceOpen = false;
@@ -195,9 +222,9 @@
 			const payload = {
 				question: question.trim(),
 				images: images.map((img) => ({
-					// Strip the data URL prefix — send only the raw base64
 					data: img.dataUrl.split(',')[1],
-					mimeType: img.mimeType
+					mimeType: img.mimeType,
+					analysis: img.analysis ?? null
 				}))
 			};
 
@@ -221,6 +248,14 @@
 				if (done) break;
 				streamedText += decoder.decode(value, { stream: true });
 			}
+
+			// Estimate token usage from text length (4 chars ≈ 1 token).
+			// Completion tokens are counted from the response; prompt tokens are estimated
+			// from the question length since we can't know the exact prompt size client-side.
+			tokenUsage = {
+				promptTokens: Math.round(question.length / 4),
+				completionTokens: Math.round(streamedText.length / 4)
+			};
 
 			result = parseAnswer(streamedText, images.length > 0);
 		} catch {
@@ -392,7 +427,7 @@
 				</div>
 
 				{#if result.mode === 'image-review'}
-					<!-- Visual issues (collapsible, open by default) -->
+					<!-- Visual issues (collapsible) -->
 					<div class="border-t border-[#2D2D2D]/8 pt-3">
 						<button
 							onclick={() => (visualIssuesOpen = !visualIssuesOpen)}
@@ -402,17 +437,17 @@
 							<span>{visualIssuesOpen ? '▲' : '▼'}</span>
 						</button>
 						{#if visualIssuesOpen}
-							<div class="mt-2 text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-wrap">
+							<div class="mt-2 prose prose-sm max-w-none text-[#2D2D2D]">
 								{#if result.visualIssues}
-								{result.visualIssues}
-							{:else}
-								<span class="text-[#2D2D2D]/40 italic">Could not parse this section — see Full response below.</span>
-							{/if}
+									{@html md(result.visualIssues)}
+								{:else}
+									<span class="text-[#2D2D2D]/40 italic">Could not parse this section — see Full response below.</span>
+								{/if}
 							</div>
 						{/if}
 					</div>
 
-					<!-- Brand compliance (collapsible, open by default) -->
+					<!-- Brand compliance (collapsible) -->
 					<div class="border-t border-[#2D2D2D]/8 pt-3">
 						<button
 							onclick={() => (brandComplianceOpen = !brandComplianceOpen)}
@@ -422,9 +457,9 @@
 							<span>{brandComplianceOpen ? '▲' : '▼'}</span>
 						</button>
 						{#if brandComplianceOpen}
-							<div class="mt-2 text-sm text-[#2D2D2D] leading-relaxed whitespace-pre-wrap">
+							<div class="mt-2 prose prose-sm max-w-none text-[#2D2D2D]">
 								{#if result.brandCompliance}
-									{result.brandCompliance}
+									{@html md(result.brandCompliance)}
 								{:else}
 									<span class="text-[#2D2D2D]/40 italic">Could not parse this section — see Full response below.</span>
 								{/if}
@@ -433,8 +468,8 @@
 					</div>
 				{:else}
 					<!-- Plain answer -->
-					<div class="text-[#2D2D2D] text-sm leading-relaxed whitespace-pre-wrap">
-						{result.answer ?? result.raw}
+					<div class="prose prose-sm max-w-none text-[#2D2D2D]">
+						{@html md(result.answer ?? result.raw)}
 					</div>
 				{/if}
 
@@ -459,10 +494,19 @@
 							Show evidence {evidenceOpen ? '▲' : '▼'}
 						</button>
 						{#if evidenceOpen}
-							<blockquote class="mt-2 border-l-2 border-[#E8614D] pl-3 text-xs text-[#2D2D2D]/60 italic whitespace-pre-wrap">
-								{result.evidence}
+							<blockquote class="mt-2 border-l-2 border-[#E8614D] pl-3 prose prose-sm max-w-none text-[#2D2D2D]/60 italic">
+								{@html md(result.evidence)}
 							</blockquote>
 						{/if}
+					</div>
+				{/if}
+
+				<!-- Token usage -->
+				{#if tokenUsage}
+					<div class="border-t border-[#2D2D2D]/8 pt-3 flex items-center gap-3 flex-wrap">
+						<span class="text-xs text-[#2D2D2D]/35">
+							~{tokenUsage.completionTokens.toLocaleString()} completion tokens (estimated)
+						</span>
 					</div>
 				{/if}
 
