@@ -62,17 +62,18 @@ Look at the submitted image. The counters appear:
   → Write "CHECK 1: FAIL — counters are taller than wide (vertical stretch)" if they look like vertical ovals
 
 CHECK 2 — "A" symbol proportions
-Brand spec: the "A" symbol is 7.5 units wide × 8.5 units tall — it must be taller than it is wide.
-Look at the "A" symbol in the submitted image compared to the reference. Write:
-  → "CHECK 2: OK — A symbol is taller than wide" if correct
-  → "CHECK 2: FAIL — A symbol appears square or wider than tall (horizontal stretch)"
-  → "CHECK 2: FAIL — A symbol appears more elongated than reference (vertical stretch)"
+Brand spec: the "A" symbol is 7.5 units wide × 8.5 units tall — height is greater than width by ~13%.
+Important: do not evaluate this in isolation. Look at the reference "A" symbol (GROUP A) and the submitted "A" symbol (GROUP B) side by side. Mentally overlay them.
+  → If the submitted "A" looks the same height-to-width ratio as the reference: write "CHECK 2: OK — A symbol is taller than wide"
+  → If the submitted "A" appears WIDER relative to its height than the reference "A" (legs splaying out more, overall shape squatter): write "CHECK 2: FAIL — A symbol appears square or wider than tall (horizontal stretch)"
+  → If the submitted "A" appears NARROWER relative to its height than the reference: write "CHECK 2: FAIL — A symbol appears more elongated than reference (vertical stretch)"
+Do not guess based on the spec number alone — compare visually to the reference image.
 
 CHECK 3 — Full wordmark aspect ratio
-Compare the overall width-to-height ratio of the entire "Aagee" wordmark in the submitted image vs the reference. Write:
-  → "CHECK 3: OK — wordmark proportions match reference"
-  → "CHECK 3: FAIL — wordmark appears wider than reference (horizontal stretch)"
-  → "CHECK 3: FAIL — wordmark appears narrower than reference (vertical stretch)"
+Place the reference wordmark (GROUP A) and submitted wordmark (GROUP B) side by side in your mind.
+  → If letter widths, spacing, and overall shape look the same: write "CHECK 3: OK — wordmark proportions match reference"
+  → If the submitted wordmark looks wider and shorter than the reference (letters broadened, cap-height feels relatively smaller): write "CHECK 3: FAIL — wordmark appears wider than reference (horizontal stretch)"
+  → If the submitted wordmark looks narrower and taller than the reference: write "CHECK 3: FAIL — wordmark appears narrower than reference (vertical stretch)"
 
 CHECK 4 — Rotation and skew
   → "CHECK 4: OK — no rotation or skew" or "CHECK 4: FAIL — [describe issue]"
@@ -179,6 +180,7 @@ export function queryBrandDocuments(
 		model: anthropic('claude-sonnet-4-6'),
 		system: IMAGE_REVIEW_SYSTEM_PROMPT,
 		messages: [{ role: 'user', content: userContent }],
-		maxOutputTokens: 3000
+		maxOutputTokens: 3000,
+		temperature: 0 // deterministic output — prevents different results across runs and deployments
 	});
 }
