@@ -14,8 +14,9 @@
 		"test:unit": "vitest",
 		"test": "npm run test:unit -- --run && npm run test:e2e",
 		"test:e2e": "playwright install && playwright test",
-		"preprocess": "node --experimental-strip-types scripts/preprocess-pdfs.ts",
-		"preprocess:force": "node --experimental-strip-types scripts/preprocess-pdfs.ts --force"
+		"preprocess": "node --env-file=.env.local --experimental-strip-types scripts/preprocess-pdfs.ts",
+		"preprocess:force": "node --env-file=.env.local --experimental-strip-types scripts/preprocess-pdfs.ts --force",
+		"preprocess:brand": "node --env-file=.env.local --experimental-strip-types scripts/preprocess-pdfs.ts --brand"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.0.4",

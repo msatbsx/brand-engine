@@ -13,8 +13,16 @@ import { existsSync } from 'fs';
 import { join, basename, extname } from 'path';
 import { tmpdir } from 'os';
 
-const DOCS_DIR = join(process.cwd(), 'src/lib/brand-documents');
-const ASSETS_DIR = join(process.cwd(), 'src/lib/brand-assets');
+// Brand slug is required: yarn preprocess --brand <slug>
+const brandArg = process.argv.find((_, i, a) => a[i - 1] === '--brand');
+if (!brandArg) {
+	console.error('Error: --brand <slug> is required. Example: yarn preprocess --brand aagee');
+	process.exit(1);
+}
+const BRAND = brandArg;
+
+const DOCS_DIR = join(process.cwd(), 'src/lib/brand-documents', BRAND);
+const ASSETS_DIR = join(process.cwd(), 'src/lib/brand-assets', BRAND);
 const PAGES_PER_BATCH = 8;
 const DPI = 96;
 
@@ -136,7 +144,7 @@ async function extractFromPages(
 
 	const response = await client.messages.create({
 		model: 'claude-sonnet-4-6',
-		max_tokens: 4096,
+		max_tokens: 8192,
 		messages: [
 			{
 				role: 'user',
@@ -172,28 +180,15 @@ Do not add commentary — only extract what is explicitly shown in the document.
 	return block.type === 'text' ? block.text : '';
 }
 
-async function mergeResults(parts: string[], filename: string): Promise<string> {
-	const combined = parts
-		.map((part, i) => `<!-- Batch ${i + 1} -->\n\n${part}`)
+// Concatenate batch results directly instead of asking Claude to merge them.
+// A merge AI call risks truncation at max_tokens and can silently drop content
+// from later batches (exactly what happened with long documents like Cprime).
+// Simple concatenation preserves 100% of extracted content; minor heading
+// duplication across batch boundaries is acceptable and doesn't affect RAG quality.
+async function mergeResults(parts: string[], _filename: string): Promise<string> {
+	return parts
+		.map((part, i) => `<!-- Pages extracted in batch ${i + 1} -->\n\n${part}`)
 		.join('\n\n---\n\n');
-
-	const response = await client.messages.create({
-		model: 'claude-sonnet-4-6',
-		max_tokens: 4096,
-		messages: [
-			{
-				role: 'user',
-				content: `The following sections were extracted from different page batches of the brand document "${filename}".
-
-Merge them into a single, clean, well-structured markdown document. Remove duplicates. Preserve every exact value (hex codes, sizes, font names, rules). Use logical heading hierarchy.
-
-${combined}`
-			}
-		]
-	});
-
-	const block = response.content[0];
-	return block.type === 'text' ? block.text : combined;
 }
 
 async function extractReferenceImages(pdfFilename: string) {
