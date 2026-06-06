@@ -310,12 +310,11 @@
 	}
 </script>
 
-<span class="fixed top-3 right-4 text-xs select-none font-body" style="color: var(--text); opacity: 0.3">
-	v{__APP_VERSION__}
-</span>
-
-<main class="min-h-screen flex flex-col items-center px-4 py-14" style="{cssVars}; background: var(--bg)">
-	<div class="w-full max-w-[932px] flex flex-col items-center gap-10">
+<main class="relative min-h-screen flex flex-col items-center px-4 py-8 sm:py-14" style="{cssVars}; background: var(--bg)">
+	<span class="absolute top-3 right-4 text-xs select-none font-body" style="color: var(--text); opacity: 0.15">
+		v {__APP_VERSION__}
+	</span>
+	<div class="w-full max-w-[932px] flex flex-col items-center gap-6 sm:gap-10">
 
 		<!-- Logo + Brand Guru -->
 		<header class="flex flex-col items-center gap-2.5">
@@ -341,26 +340,27 @@
 
 			<!-- Row 1: Ask me anything -->
 			<div
-				class="flex items-center h-24 border rounded-[100px] px-7 gap-5"
+				class="flex flex-col items-center gap-3 border rounded-2xl px-6 py-5 sm:flex-row sm:h-24 sm:rounded-[100px] sm:px-7 sm:gap-5 sm:py-0"
 				style="background: var(--surface); border-color: var(--border)"
 			>
-				<span class="font-semibold text-lg uppercase tracking-[0.02em] whitespace-nowrap shrink-0" style="color: var(--text); font-family: var(--font-label)">
+				<span class="font-semibold text-lg uppercase tracking-[0.02em] text-center sm:text-left sm:whitespace-nowrap sm:shrink-0" style="color: var(--text); font-family: var(--font-label)">
 					Ask me anything
 				</span>
-				<input
+				<textarea
 					bind:value={question}
 					onkeydown={handleKeydown}
 					onfocus={() => (askFocused = true)}
 					onblur={() => (askFocused = false)}
 					placeholder="e.g. Can I use the logo on an image?"
 					disabled={loading}
-					class="flex-1 bg-transparent border-none outline-none shadow-none ring-0 focus:ring-0 text-lg font-body disabled:opacity-50 placeholder-themed"
+					rows="2"
+					class="w-full sm:flex-1 bg-transparent border-none outline-none shadow-none ring-0 focus:ring-0 text-lg font-body disabled:opacity-50 placeholder-themed resize-none"
 					style="color: var(--text); font-family: var(--font-sans)"
-				/>
+				></textarea>
 				<button
 					onclick={handleTextSubmit}
 					disabled={loading || !question.trim()}
-					class="shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-opacity"
+					class="submit-btn shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-opacity"
 					style="background: var(--btn-gradient); opacity: {askFocused ? 1 : 0.4}"
 					aria-label="Submit question"
 				>
@@ -374,7 +374,7 @@
 			<div
 				role="button"
 				tabindex="0"
-				class="flex items-center h-24 border rounded-[100px] px-7 gap-5 cursor-pointer transition-colors"
+				class="flex flex-col items-center gap-3 border rounded-2xl px-6 py-5 cursor-pointer transition-colors sm:flex-row sm:h-24 sm:rounded-[100px] sm:px-7 sm:gap-5 sm:py-0"
 				style="background: {dragging ? 'var(--drag-bg)' : 'var(--surface)'}; border-color: {dragging ? 'var(--drag-border)' : 'var(--border)'}"
 				ondragover={handleDragOver}
 				ondragleave={handleDragLeave}
@@ -382,14 +382,14 @@
 				onclick={() => fileInput.click()}
 				onkeydown={(e) => e.key === 'Enter' && fileInput.click()}
 			>
-				<span class="font-semibold text-lg uppercase tracking-[0.02em] whitespace-nowrap shrink-0" style="color: var(--text); font-family: var(--font-label)">
+				<span class="font-semibold text-lg uppercase tracking-[0.02em] text-center sm:text-left sm:whitespace-nowrap sm:shrink-0" style="color: var(--text); font-family: var(--font-label)">
 					Check your work
 				</span>
 
 				{#if images.length === 0}
-					<div class="flex items-center gap-3 flex-1 pointer-events-none">
+					<div class="flex items-center gap-3 flex-1 w-full sm:w-auto justify-center sm:justify-start pointer-events-none">
 						<img src="/image-icon.svg" alt="" class="w-8 h-8 shrink-0" aria-hidden="true" />
-						<p class="text-lg font-body" style="color: var(--placeholder)">
+						<p class="text-lg font-body text-center sm:text-left" style="color: var(--placeholder)">
 							Drop your brand assets here or <span class="font-semibold" style="color: var(--browse)">browse</span>
 						</p>
 					</div>
@@ -427,7 +427,7 @@
 				<button
 					onclick={(e) => { e.stopPropagation(); handleImageSubmit(); }}
 					disabled={loading || images.length === 0}
-					class="shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-opacity"
+					class="submit-btn shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-opacity"
 					style="background: var(--btn-gradient); opacity: {images.length > 0 || dragging ? 1 : 0.4}"
 					aria-label="Check design"
 				>
@@ -628,7 +628,7 @@
 			<h2 class="font-semibold text-lg uppercase tracking-[0.02em] mb-3" style="color: var(--text); font-family: var(--font-label)">
 				Quick links
 			</h2>
-			<div class="grid grid-cols-3 border-l border-t" style="border-color: var(--grid-border)">
+			<div class="grid grid-cols-1 sm:grid-cols-3 border-l border-t" style="border-color: var(--grid-border)">
 				{#each brand.questions as q}
 					<button
 						type="button"
@@ -674,7 +674,9 @@
 		color: var(--accent);
 	}
 
-	input.placeholder-themed::placeholder {
+	input.placeholder-themed::placeholder,
+	textarea.placeholder-themed::placeholder {
 		color: var(--placeholder);
 	}
+
 </style>
