@@ -1,3 +1,9 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+@theme {
+	--font-condensed: 'Barlow Condensed', sans-serif;
+	--font-display: 'Playfair Display', serif;
+	--font-body: 'Barlow', sans-serif;
+}
