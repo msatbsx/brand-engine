@@ -14,7 +14,30 @@ const cprime: BrandConfig = {
 		'What should a LinkedIn post from our brand look and sound like?',
 		'What fonts do I use for Cprime headlines?',
 		'How do I use the Cprime logo with partner logos?'
-	]
+	],
+	guidelinePages: true,
+	theme: {
+		bg: '#f8f6ef',
+		surface: '#ffffff',
+		text: '#161616',
+		textMuted: 'rgba(22,22,22,0.5)',
+		placeholder: '#b3b3b3',
+		browse: '#7a7a7a',
+		border: '#d3d3d3',
+		gridBorder: 'rgba(133,133,133,0.77)',
+		btnGradient: 'linear-gradient(135deg, #FF8E3C 0%, #E739F0 100%)',
+		hoverGradient: 'linear-gradient(244deg, rgba(231,57,240,0.5) 23.364%, rgba(251,242,223,0.5) 100.42%)',
+		accent: '#E739F0',
+		accentBg: 'rgba(231,57,240,0.1)',
+		accentFg: '#c020cc',
+		dragBorder: '#E739F0',
+		dragBg: 'rgba(231,57,240,0.05)',
+		fontSans: "'Barlow', sans-serif",
+		fontLabel: "'Barlow Condensed', sans-serif",
+		fontSubtitle: "'Playfair Display', serif",
+		subtitleStyle: 'italic',
+		proseInvert: false
+	}
 };
 
 export default cprime;

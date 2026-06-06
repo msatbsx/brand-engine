@@ -18,7 +18,7 @@
 
 ---
 
-## 1. Logo
+## 1. Logo (Page 4)
 
 ### 1.1 Logo Description
 
@@ -160,7 +160,7 @@ To keep the Aagee logo consistent and recognizable, avoid the following:
 
 ---
 
-## 2. Color
+## 2. Color (Page 12)
 
 ### 2.1 Color Palette
 
@@ -232,7 +232,7 @@ Use gradients as backgrounds, but always prioritize contrast and readability whe
 
 ---
 
-## 3. Typography
+## 3. Typography (Page 18)
 
 ### 3.1 Primary Typeface: Figtree
 
@@ -264,7 +264,7 @@ Fraunces is the secondary typeface. Usage is limited. It helps highlight small m
 
 ---
 
-## 4. Graphic Elements
+## 4. Graphic Elements (Page 21)
 
 ### 4.1 Logo Shape
 
@@ -286,7 +286,7 @@ The "A" shape is built using a Rubik's Cube-inspired grid. The grid helps keep e
 
 ---
 
-## 5. Imagery
+## 5. Imagery (Page 25)
 
 ### 5.1 Category 1: Visionary
 
@@ -312,7 +312,7 @@ Real moments of people connecting — whether they're chatting, laughing, or wor
 
 ---
 
-## 6. Brand in Use
+## 6. Brand in Use (Page 27)
 
 ### 6.1 Logo on Social Media
 

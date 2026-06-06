@@ -7,6 +7,28 @@
 	let { data } = $props<{ data: { brand: BrandConfig } }>();
 	const brand = data.brand;
 
+	const t = brand.theme;
+	const cssVars = [
+		`--bg:${t.bg}`,
+		`--surface:${t.surface}`,
+		`--text:${t.text}`,
+		`--text-muted:${t.textMuted}`,
+		`--placeholder:${t.placeholder}`,
+		`--browse:${t.browse}`,
+		`--border:${t.border}`,
+		`--grid-border:${t.gridBorder}`,
+		`--btn-gradient:${t.btnGradient}`,
+		`--hover-gradient:${t.hoverGradient}`,
+		`--accent:${t.accent}`,
+		`--accent-bg:${t.accentBg}`,
+		`--accent-fg:${t.accentFg}`,
+		`--drag-border:${t.dragBorder}`,
+		`--drag-bg:${t.dragBg}`,
+		`--font-sans:${t.fontSans}`,
+		`--font-label:${t.fontLabel}`,
+		`--font-subtitle:${t.fontSubtitle}`
+	].join(';');
+
 	marked.setOptions({ breaks: true });
 
 	function md(text: string | null | undefined): string {
@@ -98,8 +120,10 @@
 	}
 
 	function pageUrl(n: number): string {
-		return `/brand/cprime/pages/page-${String(n).padStart(2, '0')}.jpg`;
+		return `/brand/${brand.id}/pages/page-${String(n).padStart(2, '0')}.jpg`;
 	}
+
+	const proseClass = `prose prose-sm max-w-none${brand.theme.proseInvert ? ' prose-invert' : ''}`;
 
 	function parseAnswer(raw: string, hasImages: boolean): AnswerState {
 		const confidenceMatch =
@@ -286,11 +310,11 @@
 	}
 </script>
 
-<span class="fixed top-3 right-4 text-xs text-[#161616]/30 select-none font-body">
+<span class="fixed top-3 right-4 text-xs select-none font-body" style="color: var(--text); opacity: 0.3">
 	v{__APP_VERSION__}
 </span>
 
-<main class="min-h-screen bg-[#f8f6ef] flex flex-col items-center px-4 py-14">
+<main class="min-h-screen flex flex-col items-center px-4 py-14" style="{cssVars}; background: var(--bg)">
 	<div class="w-full max-w-[932px] flex flex-col items-center gap-10">
 
 		<!-- Logo + Brand Guru -->
@@ -298,17 +322,17 @@
 			{#if brand.logoUrl}
 				<img src={brand.logoUrl} alt={brand.logoAlt} class="h-14 w-auto object-contain" />
 			{:else}
-				<span class="text-[#161616] text-2xl font-condensed font-semibold uppercase tracking-[0.06em]">
+				<span class="text-2xl font-semibold uppercase tracking-[0.06em]" style="color: var(--text); font-family: var(--font-label)">
 					{brand.name}
 				</span>
 			{/if}
-			<h1 class="font-condensed font-semibold text-[#161616] text-3xl uppercase tracking-[0.06em]">
+			<h1 class="font-semibold text-3xl uppercase tracking-[0.06em]" style="color: var(--text); font-family: var(--font-label)">
 				Brand Guru
 			</h1>
 		</header>
 
 		<!-- Subtitle -->
-		<p class="font-display italic text-[#161616] text-xl text-center max-w-[570px] leading-[1.45] tracking-[0.02em]">
+		<p style="font-family: var(--font-subtitle); font-style: {brand.theme.subtitleStyle}; color: var(--text)" class="text-xl text-center max-w-[570px] leading-[1.45] tracking-[0.02em]">
 			{brand.introText}
 		</p>
 
@@ -316,8 +340,11 @@
 		<div class="flex flex-col gap-4 w-full">
 
 			<!-- Row 1: Ask me anything -->
-			<div class="flex items-center h-24 bg-white border border-[#d3d3d3] rounded-[100px] px-7 gap-5">
-				<span class="font-condensed font-semibold text-[#161616] text-lg uppercase tracking-[0.02em] whitespace-nowrap shrink-0">
+			<div
+				class="flex items-center h-24 border rounded-[100px] px-7 gap-5"
+				style="background: var(--surface); border-color: var(--border)"
+			>
+				<span class="font-semibold text-lg uppercase tracking-[0.02em] whitespace-nowrap shrink-0" style="color: var(--text); font-family: var(--font-label)">
 					Ask me anything
 				</span>
 				<input
@@ -327,13 +354,14 @@
 					onblur={() => (askFocused = false)}
 					placeholder="e.g. Can I use the logo on an image?"
 					disabled={loading}
-					class="flex-1 bg-transparent border-none outline-none shadow-none ring-0 focus:ring-0 text-[#161616] text-lg placeholder:text-[#b3b3b3] font-body disabled:opacity-50"
+					class="flex-1 bg-transparent border-none outline-none shadow-none ring-0 focus:ring-0 text-lg font-body disabled:opacity-50 placeholder-themed"
+					style="color: var(--text); font-family: var(--font-sans)"
 				/>
 				<button
 					onclick={handleTextSubmit}
 					disabled={loading || !question.trim()}
 					class="shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-opacity"
-					style="background: linear-gradient(135deg, #FF8E3C 0%, #E739F0 100%); opacity: {askFocused ? 1 : 0.4}"
+					style="background: var(--btn-gradient); opacity: {askFocused ? 1 : 0.4}"
 					aria-label="Submit question"
 				>
 					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -346,23 +374,23 @@
 			<div
 				role="button"
 				tabindex="0"
-				class="flex items-center h-24 bg-white border border-[#d3d3d3] rounded-[100px] px-7 gap-5 cursor-pointer transition-colors
-					{dragging ? 'border-[#E739F0] bg-[#E739F0]/5' : 'hover:border-[#b3b3b3]'}"
+				class="flex items-center h-24 border rounded-[100px] px-7 gap-5 cursor-pointer transition-colors"
+				style="background: {dragging ? 'var(--drag-bg)' : 'var(--surface)'}; border-color: {dragging ? 'var(--drag-border)' : 'var(--border)'}"
 				ondragover={handleDragOver}
 				ondragleave={handleDragLeave}
 				ondrop={handleDrop}
 				onclick={() => fileInput.click()}
 				onkeydown={(e) => e.key === 'Enter' && fileInput.click()}
 			>
-				<span class="font-condensed font-semibold text-[#161616] text-lg uppercase tracking-[0.02em] whitespace-nowrap shrink-0">
+				<span class="font-semibold text-lg uppercase tracking-[0.02em] whitespace-nowrap shrink-0" style="color: var(--text); font-family: var(--font-label)">
 					Check your work
 				</span>
 
 				{#if images.length === 0}
 					<div class="flex items-center gap-3 flex-1 pointer-events-none">
 						<img src="/image-icon.svg" alt="" class="w-8 h-8 shrink-0" aria-hidden="true" />
-						<p class="text-lg font-body" style="color: #b3b3b3">
-							Drop your brand assets here or <span class="font-semibold" style="color: #7a7a7a">browse</span>
+						<p class="text-lg font-body" style="color: var(--placeholder)">
+							Drop your brand assets here or <span class="font-semibold" style="color: var(--browse)">browse</span>
 						</p>
 					</div>
 				{:else}
@@ -372,20 +400,24 @@
 								<img
 									src={img.dataUrl}
 									alt={img.name}
-									class="h-14 w-14 rounded-full object-cover border border-[#d3d3d3]"
+									class="h-14 w-14 rounded-full object-cover border"
+									style="border-color: var(--border)"
 								/>
 								<button
 									type="button"
 									onclick={(e) => { e.stopPropagation(); removeImage(i); }}
-									class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#161616] text-white text-[10px]
+									class="absolute -top-1 -right-1 w-5 h-5 rounded-full text-white text-[10px]
 										flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-auto"
+									style="background: var(--text)"
 									aria-label="Remove {img.name}"
 								>✕</button>
 							</div>
 						{/each}
 						{#if images.length < MAX_IMAGES}
-							<div class="h-14 w-14 rounded-full border-2 border-dashed border-[#d3d3d3]
-								flex items-center justify-center text-[#d3d3d3] text-xl shrink-0">
+							<div class="h-14 w-14 rounded-full border-2 border-dashed
+								flex items-center justify-center text-xl shrink-0"
+								style="border-color: var(--border); color: var(--border)"
+							>
 								+
 							</div>
 						{/if}
@@ -396,7 +428,7 @@
 					onclick={(e) => { e.stopPropagation(); handleImageSubmit(); }}
 					disabled={loading || images.length === 0}
 					class="shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-opacity"
-					style="background: linear-gradient(135deg, #FF8E3C 0%, #E739F0 100%); opacity: {images.length > 0 || dragging ? 1 : 0.4}"
+					style="background: var(--btn-gradient); opacity: {images.length > 0 || dragging ? 1 : 0.4}"
 					aria-label="Check design"
 				>
 					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -417,7 +449,7 @@
 
 		<!-- Processing indicator -->
 		{#if loading}
-			<div transition:fade={{ duration: 150 }} class="flex items-center gap-2.5 text-[#161616]/50">
+			<div transition:fade={{ duration: 150 }} class="flex items-center gap-2.5" style="color: var(--text-muted)">
 				<span class="spinner"></span>
 				<span class="font-body text-sm tracking-wide">Processing…</span>
 			</div>
@@ -432,24 +464,24 @@
 
 		<!-- Streaming / loading -->
 		{#if loading && !streamedText}
-			<div class="w-full rounded-2xl border border-[#d3d3d3] bg-white px-6 py-4 text-[#161616]/40 animate-pulse font-body">
+			<div class="w-full rounded-2xl border px-6 py-4 animate-pulse font-body" style="border-color: var(--border); background: var(--surface); color: var(--text-muted)">
 				{images.length ? 'Analysing design against brand guidelines…' : 'Reading brand documents…'}
 			</div>
 		{:else if loading && streamedText}
-			<div class="w-full rounded-2xl border border-[#d3d3d3] bg-white px-6 py-4 text-[#161616]/60 whitespace-pre-wrap font-body text-sm">
+			<div class="w-full rounded-2xl border px-6 py-4 whitespace-pre-wrap font-body text-sm" style="border-color: var(--border); background: var(--surface); color: var(--text-muted)">
 				{streamedText}
 			</div>
 		{/if}
 
 		<!-- Result -->
 		{#if result && !loading}
-			<div class="w-full rounded-2xl border border-[#d3d3d3] bg-white px-6 py-6 flex flex-col gap-4 shadow-sm">
+			<div class="w-full rounded-2xl border px-6 py-6 flex flex-col gap-4 shadow-sm" style="border-color: var(--border); background: var(--surface)">
 
 				<!-- Confidence + Verdict -->
 				<div class="flex items-center gap-3 flex-wrap">
 					{#if result.confidence}
 						<div class="flex items-center gap-1.5">
-							<span class="text-xs font-condensed font-semibold text-[#161616]/50 uppercase tracking-wider">Confidence</span>
+							<span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted); font-family: var(--font-label)">Confidence</span>
 							<span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {confidenceColour[result.confidence] ?? 'bg-gray-100 text-gray-700'}">
 								{result.confidence}
 							</span>
@@ -457,7 +489,7 @@
 					{/if}
 					{#if result.verdict}
 						<div class="flex items-center gap-1.5">
-							<span class="text-xs font-condensed font-semibold text-[#161616]/50 uppercase tracking-wider">Verdict</span>
+							<span class="text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted); font-family: var(--font-label)">Verdict</span>
 							<span class="rounded-full px-2.5 py-0.5 text-xs font-semibold
 								{result.verdict.toLowerCase().includes('pass')
 									? 'bg-emerald-100 text-emerald-800'
@@ -471,53 +503,55 @@
 				</div>
 
 				{#if result.mode === 'image-review'}
-					<div class="border-t border-[#d3d3d3] pt-3">
+					<div class="border-t pt-3" style="border-color: var(--border)">
 						<button
 							onclick={() => (visualIssuesOpen = !visualIssuesOpen)}
-							class="w-full flex items-center justify-between text-xs font-condensed font-semibold text-[#161616]/50 uppercase tracking-wider hover:text-[#161616] transition"
+							class="w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wider transition"
+							style="color: var(--text-muted); font-family: var(--font-label)"
 						>
 							<span>Visual issues</span>
 							<span>{visualIssuesOpen ? '▲' : '▼'}</span>
 						</button>
 						{#if visualIssuesOpen}
-							<div class="mt-2 prose prose-sm max-w-none text-[#161616]">
+							<div class="mt-2 {proseClass}" style="color: var(--text)">
 								{#if result.visualIssues}
 									{@html md(result.visualIssues)}
 								{:else}
-									<span class="text-[#161616]/40 italic">Could not parse this section — see Full response below.</span>
+									<span style="color: var(--text-muted)" class="italic">Could not parse this section — see Full response below.</span>
 								{/if}
 							</div>
 						{/if}
 					</div>
 
-					<div class="border-t border-[#d3d3d3] pt-3">
+					<div class="border-t pt-3" style="border-color: var(--border)">
 						<button
 							onclick={() => (brandComplianceOpen = !brandComplianceOpen)}
-							class="w-full flex items-center justify-between text-xs font-condensed font-semibold text-[#161616]/50 uppercase tracking-wider hover:text-[#161616] transition"
+							class="w-full flex items-center justify-between text-xs font-semibold uppercase tracking-wider transition"
+							style="color: var(--text-muted); font-family: var(--font-label)"
 						>
 							<span>Brand compliance</span>
 							<span>{brandComplianceOpen ? '▲' : '▼'}</span>
 						</button>
 						{#if brandComplianceOpen}
-							<div class="mt-2 prose prose-sm max-w-none text-[#161616]">
+							<div class="mt-2 {proseClass}" style="color: var(--text)">
 								{#if result.brandCompliance}
 									{@html md(result.brandCompliance)}
 								{:else}
-									<span class="text-[#161616]/40 italic">Could not parse this section — see Full response below.</span>
+									<span style="color: var(--text-muted)" class="italic">Could not parse this section — see Full response below.</span>
 								{/if}
 							</div>
 						{/if}
 					</div>
 				{:else}
-					<div class="prose prose-sm max-w-none text-[#161616]">
+					<div class="{proseClass}" style="color: var(--text)">
 						{@html md(result.answer ?? result.raw)}
 					</div>
 				{/if}
 
 				<!-- Guideline page images -->
-				{#if result.pageRefs.length > 0}
-					<div class="border-t border-[#d3d3d3] pt-4">
-						<p class="font-condensed font-semibold text-[#161616]/50 text-xs uppercase tracking-wider mb-3">
+				{#if brand.guidelinePages && result.pageRefs.length > 0}
+					<div class="border-t pt-4" style="border-color: var(--border)">
+						<p class="text-xs font-semibold uppercase tracking-wider mb-3" style="color: var(--text-muted); font-family: var(--font-label)">
 							Guideline pages
 						</p>
 						<div class="flex flex-col gap-4">
@@ -526,12 +560,12 @@
 									href={pageUrl(n)}
 									target="_blank"
 									rel="noopener"
-									class="group block"
+									class="page-thumb group block"
 								>
-									<div class="w-full rounded overflow-hidden border border-[#d3d3d3] group-hover:border-[#E739F0] transition-colors shadow-sm">
+									<div class="w-full rounded overflow-hidden border page-thumb-border transition-colors shadow-sm" style="border-color: var(--border)">
 										<img src={pageUrl(n)} alt="Page {n}" class="w-full block" loading="lazy" />
 									</div>
-									<span class="text-xs text-[#161616]/40 font-body group-hover:text-[#E739F0] transition-colors mt-1.5 block">
+									<span class="page-thumb-label text-xs font-body mt-1.5 block transition-colors" style="color: var(--text-muted)">
 										Page {n}
 									</span>
 								</a>
@@ -541,9 +575,9 @@
 				{/if}
 
 				{#if result.sources.length > 0}
-					<div class="border-t border-[#d3d3d3] pt-3 flex flex-wrap gap-2">
+					<div class="border-t pt-3 flex flex-wrap gap-2" style="border-color: var(--border)">
 						{#each result.sources as source}
-							<span class="rounded-md bg-[#E739F0]/10 px-2.5 py-1 text-xs font-semibold font-body text-[#c020cc]">
+							<span class="rounded-md px-2.5 py-1 text-xs font-semibold font-body" style="background: var(--accent-bg); color: var(--accent-fg)">
 								{source}
 							</span>
 						{/each}
@@ -551,58 +585,58 @@
 				{/if}
 
 				{#if result.evidence}
-					<div class="border-t border-[#d3d3d3] pt-3">
+					<div class="border-t pt-3" style="border-color: var(--border)">
 						<button
 							onclick={() => (evidenceOpen = !evidenceOpen)}
-							class="text-xs text-[#161616]/50 hover:text-[#161616] transition flex items-center gap-1 font-body"
+							class="text-xs hover:opacity-80 transition flex items-center gap-1 font-body"
+							style="color: var(--text-muted)"
 						>
 							Show evidence {evidenceOpen ? '▲' : '▼'}
 						</button>
 						{#if evidenceOpen}
-							<blockquote class="mt-2 border-l-2 border-[#E739F0] pl-3 prose prose-sm max-w-none text-[#161616]/60 italic">
+							<blockquote class="mt-2 border-l-2 pl-3 {proseClass} italic" style="border-color: var(--accent); color: var(--text-muted)">
 								{@html md(result.evidence)}
 							</blockquote>
 						{/if}
 					</div>
 				{/if}
 
-				{#if tokenUsage}
-					<div class="border-t border-[#d3d3d3] pt-3">
-						<span class="text-xs text-[#161616]/35 font-body">
-							~{tokenUsage.completionTokens.toLocaleString()} completion tokens (estimated)
-						</span>
-					</div>
-				{/if}
-
-				<div class="border-t border-[#d3d3d3] pt-3">
+				<div class="border-t pt-3" style="border-color: var(--border)">
 					<button
 						onclick={() => (fullResponseOpen = !fullResponseOpen)}
-						class="text-xs text-[#161616]/40 hover:text-[#161616] transition flex items-center gap-1 font-body"
+						class="text-xs hover:opacity-80 transition flex items-center gap-1 font-body"
+						style="color: var(--text-muted)"
 					>
 						Full response {fullResponseOpen ? '▲' : '▼'}
 					</button>
 					{#if fullResponseOpen}
-						<pre class="mt-2 text-xs text-[#161616]/60 whitespace-pre-wrap font-mono leading-relaxed">{result.raw}</pre>
+						<pre class="mt-2 text-xs whitespace-pre-wrap font-mono leading-relaxed" style="color: var(--text-muted)">{result.raw}</pre>
+						{#if tokenUsage}
+							<p class="mt-3 text-xs font-body" style="color: var(--text-muted); opacity: 0.6">
+								~{tokenUsage.completionTokens.toLocaleString()} completion tokens (estimated)
+							</p>
+						{/if}
 					{/if}
 				</div>
 			</div>
 
-			<p class="text-center text-xs text-[#161616]/35 font-body">"{question}"</p>
+			<p class="text-center text-xs font-body" style="color: var(--text-muted); opacity: 0.7">"{question}"</p>
 		{/if}
 
 		<!-- Quick links -->
 		<section class="w-full">
-			<h2 class="font-condensed font-semibold text-[#161616] text-lg uppercase tracking-[0.02em] mb-3">
+			<h2 class="font-semibold text-lg uppercase tracking-[0.02em] mb-3" style="color: var(--text); font-family: var(--font-label)">
 				Quick links
 			</h2>
-			<div class="grid grid-cols-3 border-l border-t border-[rgba(133,133,133,0.77)]">
-				{#each brand.questions as q, i}
+			<div class="grid grid-cols-3 border-l border-t" style="border-color: var(--grid-border)">
+				{#each brand.questions as q}
 					<button
 						type="button"
 						disabled={loading}
 						onclick={() => { question = q; handleTextSubmit(); }}
-						class="quick-link border-r border-b border-[rgba(133,133,133,0.77)] px-6 py-7 text-center text-[#161616] text-base leading-[1.5] font-body
+						class="quick-link border-r border-b px-6 py-7 text-center text-base leading-[1.5] font-body
 							transition-colors disabled:opacity-40 disabled:cursor-not-allowed min-h-[177px] flex items-center justify-center"
+						style="border-color: var(--grid-border); color: var(--text)"
 					>
 						{q}
 					</button>
@@ -615,20 +649,32 @@
 
 <style>
 	.quick-link:not(:disabled):hover {
-		background: linear-gradient(244deg, rgba(231, 57, 240, 0.5) 23.364%, rgba(251, 242, 223, 0.5) 100.42%);
+		background: var(--hover-gradient);
 	}
 
 	.spinner {
 		width: 18px;
 		height: 18px;
 		border-radius: 50%;
-		border: 2px solid rgba(231, 57, 240, 0.2);
-		border-top-color: #E739F0;
+		border: 2px solid var(--accent-bg);
+		border-top-color: var(--accent);
 		animation: spin 0.75s linear infinite;
 		flex-shrink: 0;
 	}
 
 	@keyframes spin {
 		to { transform: rotate(360deg); }
+	}
+
+	.page-thumb:hover .page-thumb-border {
+		border-color: var(--accent);
+	}
+
+	.page-thumb:hover .page-thumb-label {
+		color: var(--accent);
+	}
+
+	input.placeholder-themed::placeholder {
+		color: var(--placeholder);
 	}
 </style>
