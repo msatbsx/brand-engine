@@ -46,7 +46,7 @@ Sources:
 - <filename>
 
 Evidence:
-<one or two direct quotes from the documents that support your answer>`;
+<direct quotes from the documents that support your answer. Prefix every quote with its page number using this exact format: [Page N] — e.g. [Page 15] "The Cprime logo must always appear..." You may cite multiple pages.>`;
 
 const IMAGE_REVIEW_SYSTEM_PROMPT = `You are a precise brand compliance reviewer. Your most important skill is detecting geometric distortion in logos.
 
@@ -127,7 +127,7 @@ Sources:
 - <filename>
 
 Evidence:
-<direct quotes from the documents supporting your compliance findings>`;
+<direct quotes from the documents supporting your compliance findings. Prefix every quote with its page number using this exact format: [Page N] — e.g. [Page 25] "Minimum clear space is equal to..." You may cite multiple pages.>`;
 
 function buildDocumentContext(docs: BrandDocument[]): string {
 	return docs

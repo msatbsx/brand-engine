@@ -29,6 +29,7 @@
 		verdict: string | null;
 		sources: string[];
 		evidence: string | null;
+		pageRefs: number[];
 	}
 
 	interface ImagePreview {
@@ -90,6 +91,16 @@
 		return text.slice(contentStart, contentEnd).trim() || null;
 	}
 
+	function extractPageRefs(text: string): number[] {
+		const matches = [...text.matchAll(/\[?[Pp]age\s+0*(\d+)\]?/g)];
+		const nums = matches.map(m => parseInt(m[1])).filter(n => n >= 1 && n <= 90);
+		return [...new Set(nums)].sort((a, b) => a - b);
+	}
+
+	function pageUrl(n: number): string {
+		return `/brand/cprime/pages/page-${String(n).padStart(2, '0')}.jpg`;
+	}
+
 	function parseAnswer(raw: string, hasImages: boolean): AnswerState {
 		const confidenceMatch =
 			raw.match(/\bconfidence\b[^a-z\n]*:?\s*\*{0,2}(High|Medium|Low)\*{0,2}/i) ??
@@ -124,7 +135,8 @@
 				brandCompliance,
 				verdict: verdictRaw ? verdictRaw[1].trim() : null,
 				sources,
-				evidence
+				evidence,
+				pageRefs: extractPageRefs(raw)
 			};
 		}
 
@@ -138,7 +150,8 @@
 			brandCompliance: null,
 			verdict: null,
 			sources,
-			evidence
+			evidence,
+			pageRefs: extractPageRefs(raw)
 		};
 	}
 
@@ -498,6 +511,32 @@
 				{:else}
 					<div class="prose prose-sm max-w-none text-[#161616]">
 						{@html md(result.answer ?? result.raw)}
+					</div>
+				{/if}
+
+				<!-- Guideline page images -->
+				{#if result.pageRefs.length > 0}
+					<div class="border-t border-[#d3d3d3] pt-4">
+						<p class="font-condensed font-semibold text-[#161616]/50 text-xs uppercase tracking-wider mb-3">
+							Guideline pages
+						</p>
+						<div class="flex flex-col gap-4">
+							{#each result.pageRefs as n}
+								<a
+									href={pageUrl(n)}
+									target="_blank"
+									rel="noopener"
+									class="group block"
+								>
+									<div class="w-full rounded overflow-hidden border border-[#d3d3d3] group-hover:border-[#E739F0] transition-colors shadow-sm">
+										<img src={pageUrl(n)} alt="Page {n}" class="w-full block" loading="lazy" />
+									</div>
+									<span class="text-xs text-[#161616]/40 font-body group-hover:text-[#E739F0] transition-colors mt-1.5 block">
+										Page {n}
+									</span>
+								</a>
+							{/each}
+						</div>
 					</div>
 				{/if}
 
