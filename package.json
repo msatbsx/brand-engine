@@ -1,7 +1,7 @@
 {
 	"name": "brand-engine",
 	"private": true,
-	"version": "0.15",
+	"version": "0.16",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -48,6 +48,7 @@
 	"dependencies": {
 		"@ai-sdk/anthropic": "^3.0.81",
 		"@anthropic-ai/sdk": "^0.100.1",
+		"@logtail/js": "^0.5.8",
 		"ai": "^6.0.193",
 		"marked": "^18.0.4",
 		"pdf-parse": "^2.4.5",

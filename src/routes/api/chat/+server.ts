@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
+import { ACTIVE_BRAND } from '$env/static/private';
 import { retrieveDocuments } from '$lib/server/retrieveDocuments.js';
 import { queryBrandDocuments, type UploadedImage } from '$lib/server/ai.js';
 import { requireAccess } from '$lib/server/access.js';
+import { logger } from '$lib/server/logger.js';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const MAX_IMAGES = 5;
@@ -31,12 +33,15 @@ export async function POST(event) {
 		}
 	}
 
+	logger.question(question, ACTIVE_BRAND, images.length > 0);
+
 	try {
 		const docs = retrieveDocuments(question);
 		const result = queryBrandDocuments(question, docs, images as UploadedImage[]);
 		// Return the SDK's own streaming response directly — no custom wrapping.
 		return result.toTextStreamResponse();
 	} catch (err) {
+		logger.error('chat_api_error', { brand: ACTIVE_BRAND, question, error: String(err) });
 		console.error('Chat API error:', err);
 		return json({ error: 'Something went wrong. Please try again.' }, { status: 500 });
 	}
