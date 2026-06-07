@@ -26,6 +26,7 @@ export interface BrandConfig {
 	name: string;
 	logoUrl: string | null;
 	logoAlt: string;
+	logoHeight?: string;
 	introText: string;
 	accentColor: string;
 	questions: [string, string, string, string, string, string];

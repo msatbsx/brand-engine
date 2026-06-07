@@ -5,6 +5,7 @@ const aagee: BrandConfig = {
 	name: 'Aagee',
 	logoUrl: '/brand/aagee/logo-primary.png',
 	logoAlt: 'Aagee logo',
+	logoHeight: 'h-28',
 	introText: "Ask me anything about the Aagee brand — logo usage, colour, typography, tone of voice, and compliance.",
 	accentColor: '#DDFB66',
 	questions: [

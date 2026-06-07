@@ -319,7 +319,7 @@
 		<!-- Logo + Brand Guru -->
 		<header class="flex flex-col items-center gap-2.5">
 			{#if brand.logoUrl}
-				<img src={brand.logoUrl} alt={brand.logoAlt} class="h-14 w-auto object-contain" />
+				<img src={brand.logoUrl} alt={brand.logoAlt} class="{brand.logoHeight ?? 'h-14'} w-auto object-contain" />
 			{:else}
 				<span class="text-2xl font-semibold uppercase tracking-[0.06em]" style="color: var(--text); font-family: var(--font-label)">
 					{brand.name}
@@ -353,7 +353,7 @@
 					onblur={() => (askFocused = false)}
 					placeholder="e.g. Can I use the logo on an image?"
 					disabled={loading}
-					rows="2"
+					rows="1"
 					class="w-full sm:flex-1 bg-transparent border-none outline-none shadow-none ring-0 focus:ring-0 text-lg font-body disabled:opacity-50 placeholder-themed resize-none"
 					style="color: var(--text); font-family: var(--font-sans)"
 				></textarea>

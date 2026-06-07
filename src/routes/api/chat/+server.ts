@@ -1,13 +1,17 @@
 import { json } from '@sveltejs/kit';
 import { retrieveDocuments } from '$lib/server/retrieveDocuments.js';
 import { queryBrandDocuments, type UploadedImage } from '$lib/server/ai.js';
+import { requireAccess } from '$lib/server/access.js';
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const MAX_IMAGES = 5;
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
-export async function POST({ request }) {
-	const { question, images = [] } = await request.json();
+export async function POST(event) {
+	// TEMPORARY POC ACCESS CONTROL — replace with proper auth/SSO before production use.
+	requireAccess(event);
+
+	const { question, images = [] } = await event.request.json();
 
 	if (!question?.trim()) {
 		return json({ error: 'Question is required.' }, { status: 400 });
