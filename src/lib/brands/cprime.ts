@@ -34,8 +34,8 @@ const cprime: BrandConfig = {
 		dragBg: 'rgba(231,57,240,0.05)',
 		fontSans: "'Barlow', sans-serif",
 		fontLabel: "'Barlow Condensed', sans-serif",
-		fontSubtitle: "'Playfair Display', serif",
-		subtitleStyle: 'italic',
+		fontSubtitle: "'Noto Serif Display', serif",
+		subtitleStyle: 'normal',
 		proseInvert: false
 	}
 };
