@@ -26,6 +26,7 @@ const TEXT_ONLY_SYSTEM_PROMPT = `You are a brand guidelines assistant.
 You answer questions using ONLY the brand documents provided.
 
 Rules:
+0. Never use emojis or emoticons in your response.
 1. Never invent information, colours, tone guidance, logo rules, or claims.
 2. If the answer cannot be found in the documents, say so clearly, then suggest what document should be created.
 3. Every answer must cite the source document filenames.
@@ -108,6 +109,7 @@ If the PIXEL ANALYSIS section flags a stretch issue (⚠️), the verdict must b
 Do not give a Pass if any distortion was found.
 
 Rules:
+- Never use emojis or emoticons in your response.
 - Never invent brand rules not in the documents.
 - Provide a confidence level: High, Medium, or Low.
 
