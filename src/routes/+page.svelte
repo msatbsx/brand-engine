@@ -49,6 +49,7 @@
 		visualIssues: string | null;
 		brandCompliance: string | null;
 		verdict: string | null;
+		failedChecks: string[];
 		sources: string[];
 		evidence: string | null;
 		pageRefs: number[];
@@ -66,6 +67,7 @@
 	const MAX_MB = 5;
 
 	let question = $state('');
+	let imageQuestion = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let result = $state<AnswerState | null>(null);
@@ -150,6 +152,9 @@
 				raw.match(/\bverdict\b[^a-z\n]*:?\s*\*{0,2}(Pass|Fail|Needs review)\*{0,2}/i) ??
 				raw.match(/\bverdict\b[^\n]*\n+\*{0,2}(Pass|Fail|Needs review)\*{0,2}/i);
 
+			const failedChecks = [...raw.matchAll(/^[-*\s]*CHECK\s+\d+\s*:\s*FAIL[^\n]*/gim)]
+				.map((m) => m[0].replace(/^[-*\s]+/, '').trim());
+
 			return {
 				raw,
 				mode: 'image-review',
@@ -158,6 +163,7 @@
 				visualIssues,
 				brandCompliance,
 				verdict: verdictRaw ? verdictRaw[1].trim() : null,
+				failedChecks,
 				sources,
 				evidence,
 				pageRefs: extractPageRefs(raw)
@@ -173,6 +179,7 @@
 			visualIssues: null,
 			brandCompliance: null,
 			verdict: null,
+			failedChecks: [],
 			sources,
 			evidence,
 			pageRefs: extractPageRefs(raw)
@@ -210,6 +217,7 @@
 
 	function removeImage(index: number) {
 		images = images.filter((_, i) => i !== index);
+		if (images.length === 0) imageQuestion = '';
 	}
 
 	function handleDragOver(e: DragEvent) {
@@ -299,8 +307,11 @@
 
 	async function handleImageSubmit() {
 		if (images.length === 0 || loading) return;
-		if (!question.trim()) {
+		const effectiveQuestion = imageQuestion.trim() || question.trim();
+		if (!effectiveQuestion) {
 			question = 'Does this design comply with the Cprime brand guidelines?';
+		} else if (imageQuestion.trim()) {
+			question = imageQuestion.trim();
 		}
 		await submitRequest(true);
 	}
@@ -340,7 +351,7 @@
 
 			<!-- Row 1: Ask me anything -->
 			<div
-				class="flex flex-col items-center gap-3 border rounded-2xl px-6 py-5 sm:flex-row sm:h-24 sm:rounded-[100px] sm:px-7 sm:gap-5 sm:py-0"
+				class="flex flex-col items-center gap-3 border rounded-2xl px-6 py-5 sm:flex-row sm:h-24 sm:rounded-[100px] sm:px-7 sm:gap-5 sm:py-0 {images.length > 0 ? 'hidden' : ''}"
 				style="background: var(--surface); border-color: var(--border)"
 			>
 				<span class="font-semibold text-lg uppercase tracking-[0.02em] text-center sm:text-left sm:whitespace-nowrap sm:shrink-0" style="color: var(--text); font-family: var(--font-label)">
@@ -372,69 +383,111 @@
 
 			<!-- Row 2: Check your work (file drop zone) -->
 			<div
-				role="button"
-				tabindex="0"
-				class="flex flex-col items-center gap-3 border rounded-2xl px-6 py-5 cursor-pointer transition-colors sm:flex-row sm:h-24 sm:rounded-[100px] sm:px-7 sm:gap-5 sm:py-0"
+				class="border rounded-2xl transition-colors sm:rounded-[100px] {images.length === 0 ? 'cursor-pointer' : ''}"
 				style="background: {dragging ? 'var(--drag-bg)' : 'var(--surface)'}; border-color: {dragging ? 'var(--drag-border)' : 'var(--border)'}"
 				ondragover={handleDragOver}
 				ondragleave={handleDragLeave}
 				ondrop={handleDrop}
-				onclick={() => fileInput.click()}
-				onkeydown={(e) => e.key === 'Enter' && fileInput.click()}
+				role={images.length === 0 ? 'button' : undefined}
+				tabindex={images.length === 0 ? 0 : undefined}
+				onclick={images.length === 0 ? () => fileInput.click() : undefined}
+				onkeydown={images.length === 0 ? (e) => e.key === 'Enter' && fileInput.click() : undefined}
 			>
-				<span class="font-semibold text-lg uppercase tracking-[0.02em] text-center sm:text-left sm:whitespace-nowrap sm:shrink-0" style="color: var(--text); font-family: var(--font-label)">
-					Check your work
-				</span>
+				<!-- Top row: always visible -->
+				<div class="flex flex-col items-center gap-3 px-6 py-5 sm:flex-row sm:h-24 sm:px-7 sm:gap-5 sm:py-0">
+					<span class="font-semibold text-lg uppercase tracking-[0.02em] text-center sm:text-left sm:whitespace-nowrap sm:shrink-0" style="color: var(--text); font-family: var(--font-label)">
+						Check your work
+					</span>
 
-				{#if images.length === 0}
-					<div class="flex items-center gap-3 flex-1 w-full sm:w-auto justify-center sm:justify-start pointer-events-none">
-						<img src="/image-icon.svg" alt="" class="w-8 h-8 shrink-0" aria-hidden="true" />
-						<p class="text-lg font-body text-center sm:text-left" style="color: var(--placeholder)">
-							Drop your brand assets here or <span class="font-semibold" style="color: var(--browse)">browse</span>
-						</p>
-					</div>
-				{:else}
-					<div class="flex items-center gap-2.5 flex-1 overflow-hidden pointer-events-none">
-						{#each images as img, i}
-							<div class="relative group shrink-0">
-								<img
-									src={img.dataUrl}
-									alt={img.name}
-									class="h-14 w-14 rounded-full object-cover border"
-									style="border-color: var(--border)"
-								/>
+					{#if images.length === 0}
+						<div class="flex items-center gap-3 flex-1 w-full sm:w-auto justify-center sm:justify-start pointer-events-none">
+							<img src="/image-icon.svg" alt="" class="w-8 h-8 shrink-0" aria-hidden="true" />
+							<p class="text-lg font-body text-center sm:text-left" style="color: var(--placeholder)">
+								Drop your brand assets here or <span class="font-semibold" style="color: var(--browse)">browse</span>
+							</p>
+						</div>
+					{:else}
+						<div class="flex items-center gap-2.5 overflow-hidden shrink-0">
+							{#each images as img, i}
+								<div class="relative group shrink-0">
+									<img
+										src={img.dataUrl}
+										alt={img.name}
+										class="h-14 w-14 rounded-full object-cover border"
+										style="border-color: var(--border)"
+									/>
+									<button
+										type="button"
+										onclick={(e) => { e.stopPropagation(); removeImage(i); }}
+										class="absolute -top-1 -right-1 w-5 h-5 rounded-full text-white text-[10px]
+											flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+										style="background: var(--text)"
+										aria-label="Remove {img.name}"
+									>✕</button>
+								</div>
+							{/each}
+							{#if images.length < MAX_IMAGES}
 								<button
 									type="button"
-									onclick={(e) => { e.stopPropagation(); removeImage(i); }}
-									class="absolute -top-1 -right-1 w-5 h-5 rounded-full text-white text-[10px]
-										flex items-center justify-center opacity-0 group-hover:opacity-100 transition pointer-events-auto"
-									style="background: var(--text)"
-									aria-label="Remove {img.name}"
-								>✕</button>
-							</div>
-						{/each}
-						{#if images.length < MAX_IMAGES}
-							<div class="h-14 w-14 rounded-full border-2 border-dashed
-								flex items-center justify-center text-xl shrink-0"
-								style="border-color: var(--border); color: var(--border)"
-							>
-								+
-							</div>
-						{/if}
+									onclick={() => fileInput.click()}
+									class="h-14 w-14 rounded-full border-2 border-dashed
+										flex items-center justify-center text-xl shrink-0 transition-opacity hover:opacity-70"
+									style="border-color: var(--border); color: var(--border)"
+									aria-label="Add more images"
+								>+</button>
+							{/if}
+						</div>
+
+						<!-- Desktop: input inline in the same row -->
+						<input
+							type="text"
+							bind:value={imageQuestion}
+							placeholder="Ask a question about your design…"
+							onkeydown={(e) => { if (e.key === 'Enter') handleImageSubmit(); }}
+							onclick={(e) => e.stopPropagation()}
+							class="hidden sm:block sm:flex-1 bg-transparent border-none outline-none shadow-none ring-0 focus:ring-0 text-lg font-body placeholder-themed"
+							style="color: var(--text)"
+						/>
+					{/if}
+
+					<button
+						onclick={(e) => { e.stopPropagation(); handleImageSubmit(); }}
+						disabled={loading || images.length === 0}
+						class="submit-btn shrink-0 w-12 h-12 rounded-full {images.length > 0 ? 'hidden sm:flex' : 'flex'} items-center justify-center transition-opacity"
+						style="background: var(--btn-gradient); opacity: {images.length > 0 || dragging ? 1 : 0.4}"
+						aria-label="Check design"
+					>
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+						</svg>
+					</button>
+				</div>
+
+				<!-- Mobile only: question input row -->
+				{#if images.length > 0}
+					<div class="flex items-center gap-3 px-6 pb-5 sm:hidden">
+						<input
+							type="text"
+							bind:value={imageQuestion}
+							placeholder="Ask a question about your design…"
+							onkeydown={(e) => { if (e.key === 'Enter') handleImageSubmit(); }}
+							onclick={(e) => e.stopPropagation()}
+							class="flex-1 bg-transparent border-none outline-none shadow-none ring-0 focus:ring-0 text-lg font-body placeholder-themed"
+							style="color: var(--text)"
+						/>
+						<button
+							onclick={(e) => { e.stopPropagation(); handleImageSubmit(); }}
+							disabled={loading}
+							class="submit-btn shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-opacity"
+							style="background: var(--btn-gradient); opacity:1"
+							aria-label="Check design"
+						>
+							<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+							</svg>
+						</button>
 					</div>
 				{/if}
-
-				<button
-					onclick={(e) => { e.stopPropagation(); handleImageSubmit(); }}
-					disabled={loading || images.length === 0}
-					class="submit-btn shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-opacity"
-					style="background: var(--btn-gradient); opacity: {images.length > 0 || dragging ? 1 : 0.4}"
-					aria-label="Check design"
-				>
-					<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
-					</svg>
-				</button>
 			</div>
 
 			<input
@@ -501,6 +554,18 @@
 						</div>
 					{/if}
 				</div>
+
+				<!-- Failed checks summary -->
+				{#if result.failedChecks.length > 0}
+					<ul class="flex flex-col gap-1.5">
+						{#each result.failedChecks as check}
+							<li class="flex items-start gap-2 text-sm font-body" style="color: var(--text)">
+								<span class="mt-0.5 shrink-0 rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold bg-red-100 text-red-700">✕</span>
+								<span>{check.replace(/^CHECK\s+\d+\s*:\s*FAIL\s*[—–-]+\s*/i, '')}</span>
+							</li>
+						{/each}
+					</ul>
+				{/if}
 
 				{#if result.mode === 'image-review'}
 					<div class="border-t pt-3" style="border-color: var(--border)">
